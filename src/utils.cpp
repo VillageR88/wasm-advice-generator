@@ -4,9 +4,8 @@
 void drawCircle(SDL_Renderer *renderer, int cx, int cy, int r, SDL_Color color, bool hover)
 {
     static float glowAmount = 0.0f;
-    const float speed = 0.05f; // Controls how fast glow fades in/out
+    const float speed = 0.05f;
 
-    // Animate glowAmount
     if (hover && glowAmount < 1.0f)
     {
         glowAmount = std::min(1.0f, glowAmount + speed);
@@ -18,7 +17,6 @@ void drawCircle(SDL_Renderer *renderer, int cx, int cy, int r, SDL_Color color, 
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    // Draw fading glow
     if (glowAmount > 0.0f)
     {
         int glowRadius = r + 40;
@@ -43,7 +41,6 @@ void drawCircle(SDL_Renderer *renderer, int cx, int cy, int r, SDL_Color color, 
         }
     }
 
-    // Draw solid circle
     for (int w = 0; w < r * 2; w++)
     {
         for (int h = 0; h < r * 2; h++)

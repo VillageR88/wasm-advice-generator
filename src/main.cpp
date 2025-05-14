@@ -25,6 +25,7 @@ SDL_Cursor *handCursor, *defaultCursor;
 SDL_Surface *surfButton;
 std::string surfTitleText;
 std::string surfQuoteText;
+Uint32 lastTicks = 0;
 
 int titleW, titleH, buttonD, lineCount;
 float buttonX, buttonY;
@@ -114,16 +115,19 @@ void updateViewWithFetchedData(std::string advice, std::string adviceId)
     surfTitleText = "ADVICE #" + adviceId;
     surfQuoteText = advice;
 }
-Uint32 lastTicks = 0;
 
 void loop()
 {
     Uint32 currentTicks = SDL_GetTicks();
+    double dpr = emscripten_get_device_pixel_ratio();
+
     float deltaTime = (currentTicks - lastTicks) / 1000.0f;
     lastTicks = currentTicks;
     double outerWidth, outerHeight;
     emscripten_get_element_css_size("body", &outerWidth, &outerHeight);
 
+    outerWidth = outerWidth * dpr;
+    outerHeight = outerHeight * dpr;
     if (outerWidth != prevWidth || outerHeight != prevHeight)
     {
         prevWidth = outerWidth;
@@ -197,6 +201,7 @@ void loop()
 int main()
 {
     SDL_AudioSpec wav_spec_click, wav_spec_hover;
+    double dpr = emscripten_get_device_pixel_ratio();
 
     surfTitleText = "ADVICE #186";
     surfQuoteText = "One of the single best things about being an adult, is being able to buy as much LEGO as you want.";
@@ -216,13 +221,17 @@ int main()
     buttonTexture = IMG_LoadTexture(renderer, "assets/images/icon-dice.png");
     patternTexture = IMG_LoadTexture(renderer, "assets/images/pattern-divider-desktop.png");
 
-    EM_ASM(
-        var canvas = document.getElementById('canvas');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        window.addEventListener('resize', function() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight; }););
+    EM_ASM({
+        function resizeCanvas()
+        {
+            var dpr = window.devicePixelRatio || 1;
+            var canvas = document.getElementById('canvas');
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+    });
 
     emscripten_set_main_loop(loop, 0, 1);
     return 0;
