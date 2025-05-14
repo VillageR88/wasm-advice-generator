@@ -140,7 +140,8 @@ void loop()
     updateWormhole(outerWidth, outerHeight);
     renderStars(renderer);
     renderWormhole(renderer);
-
+    renderParticles(renderer);
+    updateParticles();
     int innerWidth = outerWidth <= 600 ? outerWidth - 40 : 540;
     int innerHeight = 220 + lineCount * 40;
     int contentX = (outerWidth - innerWidth) / 2;
@@ -189,9 +190,6 @@ void loop()
 
     SDL_Rect patternRect = {innerWindow.x + 50, innerWindow.y - 90 + innerWindow.h, innerWidth - 100, 18};
     SDL_RenderCopy(renderer, patternTexture, NULL, &patternRect);
-
-    renderParticles(renderer);
-    updateParticles();
 
     SDL_RenderPresent(renderer);
 }

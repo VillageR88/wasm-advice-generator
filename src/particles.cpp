@@ -73,17 +73,28 @@ void updateParticles()
 {
     for (auto it = particles.begin(); it != particles.end();)
     {
-        it->x += it->velX;
-        it->y += it->velY;
-        it->velY += 0.1;
-        it->lifespan--;
-        if (it->lifespan <= 0)
+        float distX = it->x - wormhole.x;
+        float distY = it->y - wormhole.y;
+        float distance = sqrt(distX * distX + distY * distY);
+
+        if (distance <= wormhole.baseRadius)
         {
             it = particles.erase(it);
         }
         else
         {
-            ++it;
+            it->x += it->velX;
+            it->y += it->velY;
+            it->velY += 0.1;
+            it->lifespan--;
+            if (it->lifespan <= 0)
+            {
+                it = particles.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
         }
     }
 }
@@ -91,7 +102,7 @@ void updateParticles()
 void initStars(int count, int screenWidth, int screenHeight)
 {
     stars.clear();
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count * 16; ++i)
     {
         Star s;
         s.x = rand() % screenWidth;
@@ -104,15 +115,43 @@ void initStars(int count, int screenWidth, int screenHeight)
 
 void updateStars(int screenWidth, int screenHeight)
 {
-    for (Star &s : stars)
+    std::vector<Star>::iterator it = stars.begin();
+    while (it != stars.end())
     {
+        Star &s = *it;
+        float dx = s.x - wormhole.x;
+        float dy = s.y - wormhole.y;
+        float distance = sqrt(dx * dx + dy * dy);
+
         s.x += s.speed;
         if (s.x > screenWidth)
         {
             s.x = 0;
             s.y = rand() % screenHeight;
         }
+        ++it;
     }
+}
+
+SDL_Point distortPosition(float x, float y, const Wormhole &wh)
+{
+    float dx = x - wh.x;
+    float dy = y - wh.y;
+    float distance = sqrt(dx * dx + dy * dy);
+
+    float radius = wh.baseRadius * 2.5f;
+
+    if (distance >= radius || distance == 0.0f)
+        return {(int)x, (int)y};
+
+    float distortionStrength = 100.0f * pow(1.0f - (distance / radius), 2);
+
+    float angle = atan2(dy, dx);
+
+    float offsetX = cos(angle) * distortionStrength;
+    float offsetY = sin(angle) * distortionStrength;
+
+    return {(int)(x + offsetX), (int)(y + offsetY)};
 }
 
 void renderStars(SDL_Renderer *renderer)
@@ -120,7 +159,8 @@ void renderStars(SDL_Renderer *renderer)
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     for (const Star &s : stars)
     {
-        SDL_Rect starRect = {static_cast<int>(s.x), static_cast<int>(s.y), s.size, s.size};
+        SDL_Point visual = distortPosition(s.x, s.y, wormhole);
+        SDL_Rect starRect = {visual.x, visual.y, s.size, s.size};
         SDL_RenderFillRect(renderer, &starRect);
     }
 }
@@ -140,25 +180,33 @@ void initWormhole(int screenWidth, int screenHeight)
 
 void updateWormhole(int screenWidth, int screenHeight)
 {
-    std::uniform_real_distribution<> velChange(-0.2, 0.2);
+    std::uniform_real_distribution<> velChange(-0.5, 0.5);
+
+    wormhole.velX += velChange(gen) * 0.05f;
+    wormhole.velY += velChange(gen) * 0.05f;
+
+    float speed = sqrt(wormhole.velX * wormhole.velX + wormhole.velY * wormhole.velY);
+    if (speed > 0.2f)
+    {
+        float scale = 1.2f / speed;
+        wormhole.velX *= scale;
+        wormhole.velY *= scale;
+    }
 
     wormhole.x += wormhole.velX;
     wormhole.y += wormhole.velY;
 
-    float margin = 120.0f;
-    if (wormhole.x < margin)
-        wormhole.x = margin;
-    if (wormhole.x > screenWidth - margin)
-        wormhole.x = screenWidth - margin;
-    if (wormhole.y < margin)
-        wormhole.y = margin;
-    if (wormhole.y > screenHeight - margin)
-        wormhole.y = screenHeight - margin;
+    if (wormhole.x < 0 || wormhole.x > screenWidth)
+    {
+        wormhole.velX = -wormhole.velX;
+        wormhole.x = std::clamp(wormhole.x, 0.0f, (float)screenWidth);
+    }
 
-    wormhole.velX += velChange(gen) * 0.02;
-    wormhole.velY += velChange(gen) * 0.02;
-    wormhole.velX = std::clamp(wormhole.velX, -0.5f, 0.5f);
-    wormhole.velY = std::clamp(wormhole.velY, -0.5f, 0.5f);
+    if (wormhole.y < 0 || wormhole.y > screenHeight)
+    {
+        wormhole.velY = -wormhole.velY;
+        wormhole.y = std::clamp(wormhole.y, 0.0f, (float)screenHeight);
+    }
 }
 
 void renderWormhole(SDL_Renderer *renderer)
