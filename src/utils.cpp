@@ -1,25 +1,46 @@
 #include <SDL2/SDL.h>
-#include <random>
+#include <cmath>
+#include <algorithm>
+#include <chrono>
 
 void drawCircle(SDL_Renderer *renderer, int cx, int cy, int r, SDL_Color color, bool hover)
 {
     static float glowAmount = 0.0f;
-    const float speed = 0.05f;
+    static bool glowActive = false;
+    static auto lastTime = std::chrono::steady_clock::now();
+    static SDL_Texture *glowTexture = nullptr;
+    const float speed = 1.5f; // glow rate per second
+    const int glowRadius = r + 40;
 
+    auto now = std::chrono::steady_clock::now();
+    std::chrono::duration<float> elapsed = now - lastTime;
+    lastTime = now;
+    float delta = elapsed.count(); // seconds
+
+    // Update glowAmount only when needed
     if (hover && glowAmount < 1.0f)
     {
-        glowAmount = std::min(1.0f, glowAmount + speed);
+        glowActive = true;
+        glowAmount = std::min(1.0f, glowAmount + speed * delta);
+        if (glowAmount == 1.0f)
+            glowActive = false;
     }
     else if (!hover && glowAmount > 0.0f)
     {
-        glowAmount = std::max(0.0f, glowAmount - speed);
+        glowActive = true;
+        glowAmount = std::max(0.0f, glowAmount - speed * delta);
+        if (glowAmount == 0.0f)
+            glowActive = false;
     }
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    if (glowAmount > 0.0f)
+    // Create glow texture if not exists
+    if (glowAmount > 0.0f && !glowTexture)
     {
-        int glowRadius = r + 40;
+        glowTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA4444, SDL_TEXTUREACCESS_STATIC, glowRadius * 2, glowRadius * 2);
+        SDL_SetTextureBlendMode(glowTexture, SDL_BLENDMODE_BLEND);
+        Uint16 *pixels = new Uint16[glowRadius * glowRadius * 4];
         SDL_Color glowColor = {83, 255, 170, 255};
 
         for (int w = 0; w < glowRadius * 2; w++)
@@ -33,12 +54,27 @@ void drawCircle(SDL_Renderer *renderer, int cx, int cy, int r, SDL_Color color, 
                 if (dist <= glowRadius)
                 {
                     double glowFactor = std::max(0.0, (glowRadius - dist) / 40.0);
-                    Uint8 alpha = static_cast<Uint8>(glowFactor * glowFactor * 80 * glowAmount);
-                    SDL_SetRenderDrawColor(renderer, glowColor.r, glowColor.g, glowColor.b, alpha);
-                    SDL_RenderDrawPoint(renderer, cx + dx, cy + dy);
+                    Uint8 alpha = static_cast<Uint8>(glowFactor * glowFactor * 80);
+                    Uint16 pixel = ((glowColor.r >> 4) << 12) | ((glowColor.g >> 4) << 8) | ((glowColor.b >> 4) << 4) | (alpha >> 4);
+                    pixels[w + h * glowRadius * 2] = pixel;
+                }
+                else
+                {
+                    pixels[w + h * glowRadius * 2] = 0;
                 }
             }
         }
+
+        SDL_UpdateTexture(glowTexture, nullptr, pixels, glowRadius * 2 * sizeof(Uint16));
+        delete[] pixels;
+    }
+
+    // Render glow texture
+    if (glowAmount > 0.0f && glowTexture)
+    {
+        SDL_SetTextureAlphaMod(glowTexture, static_cast<Uint8>(glowAmount * 255));
+        SDL_Rect dstRect = {cx - glowRadius, cy - glowRadius, glowRadius * 2, glowRadius * 2};
+        SDL_RenderCopy(renderer, glowTexture, nullptr, &dstRect);
     }
 
     for (int w = 0; w < r * 2; w++)

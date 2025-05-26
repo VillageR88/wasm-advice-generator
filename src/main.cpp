@@ -30,6 +30,9 @@ Uint32 lastTicks = 0;
 int titleW, titleH, buttonD, lineCount;
 float buttonX, buttonY;
 double prevWidth = -1, prevHeight = -1;
+int fontTitleSize;
+int fontQuoteSize;
+int fontButtonSize;
 
 std::vector<std::string> wrapText(const std::string &text, TTF_Font *font, int maxWidth)
 {
@@ -118,9 +121,18 @@ void updateViewWithFetchedData(std::string advice, std::string adviceId)
 
 void loop()
 {
+
     Uint32 currentTicks = SDL_GetTicks();
     double dpr = emscripten_get_device_pixel_ratio();
-
+    fontTitleSize = int(13 * dpr);
+    fontQuoteSize = int(28 * dpr);
+    fontButtonSize = int(32 * dpr);
+    TTF_CloseFont(fontTitle);
+    TTF_CloseFont(fontQuote);
+    TTF_CloseFont(fontButton);
+    fontTitle = TTF_OpenFont("assets/fonts/Manrope/Manrope-ExtraBold.ttf", fontTitleSize);
+    fontQuote = TTF_OpenFont("assets/fonts/Manrope/Manrope-ExtraBold.ttf", fontQuoteSize);
+    fontButton = TTF_OpenFont("assets/fonts/Manrope/Manrope-ExtraBold.ttf", fontButtonSize);
     float deltaTime = (currentTicks - lastTicks) / 1000.0f;
     lastTicks = currentTicks;
     double outerWidth, outerHeight;
@@ -146,8 +158,9 @@ void loop()
     renderWormhole(renderer);
     renderParticles(renderer);
     updateParticles();
-    int innerWidth = outerWidth <= 600 ? outerWidth - 40 : 540;
-    int innerHeight = 220 + lineCount * 40;
+    int dpr40 = int(40 * dpr);
+    int innerWidth = outerWidth <= (600 * dpr) ? outerWidth - dpr40 : 540 * dpr;
+    int innerHeight = 220 * dpr + lineCount * dpr40;
     int contentX = (outerWidth - innerWidth) / 2;
     int contentY = (outerHeight - innerHeight) / 2;
 
@@ -155,12 +168,12 @@ void loop()
     SDL_Rect innerWindow = {(int)(outerWidth / 2) - innerWidth / 2, (int)(outerHeight / 2) - innerHeight / 2, innerWidth, innerHeight};
     drawRoundedRect(renderer, innerWindow.x, innerWindow.y, innerWindow.w, innerWindow.h, 20, {49, 58, 72, 255});
 
-    renderLetterSpacedText(surfTitleText, fontTitle, titleColor, outerWidth / 2, innerWindow.y + 50, 4);
-    renderCenteredWrappedText(surfQuoteText.c_str(), fontQuote, quoteColor, innerWidth - 80, contentX + innerWidth / 2, contentY + 90);
+    renderLetterSpacedText(surfTitleText, fontTitle, titleColor, outerWidth / 2, innerWindow.y + int(50 * dpr), 4);
+    renderCenteredWrappedText(surfQuoteText.c_str(), fontQuote, quoteColor, innerWidth - 80, contentX + innerWidth / 2, contentY + int(90 * dpr));
     for (size_t i = 0; i < quoteLines.size(); i++)
         SDL_RenderCopy(renderer, quoteLines[i], NULL, &quoteLineRects[i]);
 
-    buttonD = 64;
+    buttonD = 64 * dpr;
     buttonX = (innerWidth - buttonD) / 2 + contentX;
     buttonY = innerHeight + contentY - buttonD / 2;
 
@@ -183,16 +196,18 @@ void loop()
         }
     }
 
+    int dpr24 = int(24 * dpr);
+    int dpr21 = int(21 * dpr);
     int mx, my;
     SDL_GetMouseState(&mx, &my);
     bool overBtn = mx >= buttonX && mx <= buttonX + buttonD && my >= buttonY && my <= buttonY + buttonD;
     SDL_SetCursor(overBtn ? handCursor : defaultCursor);
 
     drawCircle(renderer, outerWidth / 2, buttonY + buttonD / 2, buttonD / 2, {83, 255, 170, 25}, overBtn);
-    SDL_Rect buttonRect = {(int)buttonX + 21, (int)buttonY + 21, 24, 24};
+    SDL_Rect buttonRect = {int(buttonX) + dpr21, int(buttonY) + dpr21, dpr24, dpr24};
     SDL_RenderCopy(renderer, buttonTexture, NULL, &buttonRect);
 
-    SDL_Rect patternRect = {innerWindow.x + 50, innerWindow.y - 90 + innerWindow.h, innerWidth - 100, 18};
+    SDL_Rect patternRect = {innerWindow.x + int(50 * dpr), innerWindow.y - int(90 * dpr) + innerWindow.h, innerWidth - int(100 * dpr), int(18 * dpr)};
     SDL_RenderCopy(renderer, patternTexture, NULL, &patternRect);
 
     SDL_RenderPresent(renderer);
@@ -202,15 +217,12 @@ int main()
 {
     SDL_AudioSpec wav_spec_click, wav_spec_hover;
     double dpr = emscripten_get_device_pixel_ratio();
-
     surfTitleText = "ADVICE #186";
     surfQuoteText = "One of the single best things about being an adult, is being able to buy as much LEGO as you want.";
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     TTF_Init();
     IMG_Init(IMG_INIT_PNG);
-    fontTitle = TTF_OpenFont("assets/fonts/Manrope/Manrope-ExtraBold.ttf", 13);
-    fontQuote = TTF_OpenFont("assets/fonts/Manrope/Manrope-ExtraBold.ttf", 28);
-    fontButton = TTF_OpenFont("assets/fonts/Manrope/Manrope-ExtraBold.ttf", 32);
+
     handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
     defaultCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
     double outerWidth;
