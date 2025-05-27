@@ -2,21 +2,34 @@
 <html lang="en-us">
 
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
-  <link rel="shortcut icon" href="icon.svg" type="image/x-icon">
-
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="shortcut icon" href="icon.svg" type="image/x-icon" />
 </head>
 
 <body id="body">
   <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
-  <script type='text/javascript'>
-    var Module = {
-      canvas: (function () { return document.getElementById('canvas'); })()
-    };
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    canvas.style.pointerEvents = 'auto';
+    canvas.style.touchAction = 'auto';
+
+    canvas.addEventListener('touchstart', () => { }, { passive: true });
+    canvas.addEventListener('touchmove', () => { }, { passive: true });
+    canvas.addEventListener('wheel', () => { }, { passive: true });
+
+    ['touchstart', 'touchmove', 'wheel'].forEach(eventName => {
+      canvas.addEventListener(eventName, e => {
+        e.preventDefault = () => { };
+      }, { passive: false, capture: true });
+    });
+
+    var Module = { canvas: canvas };
   </script>
+
   <script src="index.js"></script>
 </body>
 
